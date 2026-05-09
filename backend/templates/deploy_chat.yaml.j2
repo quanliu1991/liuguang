@@ -1,0 +1,101 @@
+type: container
+version: v3.3.0
+imageDir: ./images/hb-serve-chat.tar
+imageLoadOrPullPolicy: IfNotPresent
+image: {{ image }}
+name: {{ service_name }}
+network: host
+volumes:
+  - "/etc/localtime:/etc/localtime"
+  - {{ model_path }}:/workspace/HengNao-3_5-35ba3b-chat
+  - {{ key_path }}:/opt/runtime_data
+environment:
+  - MODEL=/workspace/HengNao-3_5-35ba3b-chat
+  - GPU_MEMORY_UTILIZATION=0.9
+  - TENSOR_PARALLEL_SIZE={{ tp_size }}
+  - MAX_MODEL_LEN=256000
+  - TOKEN_POOL_SIZE=80000
+  - PORT={{ port }}
+  - DISABLE_CUSTOM_ALL_REDUCE=true
+  - ALLOW_CONSUL=false
+  - CONSUL_HOST={{ consul_host }}
+  - CONSUL_PORT=8500
+  - CONSUL_TOKEN={{ consul_token }}
+  - SERVED_MODEL_NAMES=HengNao-v4 HengNao-r1 HengNao-v1
+  - VERSION=v3.3.0
+  - SWAP_SPACE=0
+  - VLLM_CONFIGURE_LOGGING=0
+  - SSL_KEYFILE=/workspace/hb-serve/utils/private.key
+  - SSL_CERTIFILE=/workspace/hb-serve/utils/certificate.crt
+  - ENABLE_PREFIX_CACHING=true
+  - NCCL_P2P_LEVEL=4
+  - MINIO_ENDPOINT=10.20.152.90:9000
+  - MINIO_ACCESS_KEY=minio
+  - MINIO_SECRET_KEY=KtoRHNSbWFRAfVn2
+  - DTYPE=float16
+  - OTLP_TRACES_ENDPOINT=10.20.152.90:4317
+  - NVIDIA_DISABLE_REQUIRE=1
+  - VLLM_USE_FLASHINFER_SAMPLER=0
+  - DISABLE_CPU_OFFLOAD=true
+restart: always
+shm_size: 10g
+
+command: ["bash", "/workspace/hb-serve/run.sh"]
+require:
+  gpus:
+    device: {{ gpu_list }}
+namespace: model
+config:
+  type: consul
+  key: hb-serve-chat/configs/prod.yaml
+  policy: overwrite
+  content: |
+    hot_swaps:
+    - path: "logger.level"
+      validate: "oneof=INFO|WARN|ERROR"
+      desc: "日志等级"
+      type: "string"
+    - path: "use_priority"
+      desc: "优先级队列开关"
+      type: "bool"
+    logger:
+      level: "INFO"
+    use_priority: true
+
+env:
+  default:
+    network:
+      type: string
+      value: "host"
+      required: false
+      describe: "模型运行的网络模式，默认为hn-network，如果需要注册到别的节点，请改成host"
+    CONSUL_HOST:
+      type: string
+      value: "{{ consul_host }}"
+      required: true
+      describe: "consul注册节点"
+    CONSUL_PORT:
+      type: int
+      value: 8500
+      required: true
+      describe: "consul注册端口"
+    gpu:
+      type: gpu
+      value: {{ gpu_list }}
+      required: true
+      describe: "选择运行模型的GPU设备"
+    GPU_MEMORY_UTILIZATION:
+      type: float
+      value: 0.9
+      required: true
+      describe: "GPU显存利用率"
+    MAX_MODEL_LEN:
+      type: int
+      value: 256000
+      required: true
+      describe: "最大token数量"
+    SERVED_MODEL_NAME:
+      type: string
+      value: "HengNao-v4 HengNao-r1 HengNao-v1"
+      required: true
+      describe: "模型实例名称"
