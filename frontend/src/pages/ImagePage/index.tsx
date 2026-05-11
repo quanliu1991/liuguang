@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Table, Button, Form, Input, Switch, message, Space, Popconfirm, Modal, Tag } from 'antd';
+import { Table, Button, Form, Input, Switch, message, Space, Popconfirm, Modal } from 'antd';
 import { Plus, Pencil, Trash2, RefreshCw, Package } from 'lucide-react';
 import { getImageVersions, createImageVersion, updateImageVersion, deleteImageVersion } from '../../api';
 

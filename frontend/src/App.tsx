@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme } from 'antd';
 import Layout from './components/Layout';
-import DeployPage from './pages/DeployPage';
+import DeployFormPage from './pages/DeployFormPage';
+import DeployListPage from './pages/DeployListPage';
 import StatusPage from './pages/StatusPage';
 import ServerPage from './pages/ServerPage';
 import ModelPage from './pages/ModelPage';
@@ -69,8 +70,8 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<StatusPage />} />
-            <Route path="deploy" element={<DeployPage />} />
-            <Route path="status" element={<StatusPage />} />
+            <Route path="deploy" element={<DeployFormPage />} />
+            <Route path="status" element={<DeployListPage />} />
             <Route path="servers" element={<ServerPage />} />
             <Route path="models" element={<ModelPage />} />
             <Route path="images" element={<ImagePage />} />

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Table, Button, Form, Select, Input, InputNumber, message, Space, Modal, Tag, Typography, Card } from 'antd';
-import { Rocket, FileText, Trash2, Eye, Terminal, RefreshCw, Cpu, Server as ServerIcon, Layers, Clock } from 'lucide-react';
-import { getServers, getModels, getDeployments, createDeployment, deleteDeployment, getDeployYaml, getServerGpuStatus, getImageVersions, getDeployLogsUrl } from '../../api';
+import { Form, Select, Input, InputNumber, message, Modal, Card, Progress, Tag, Button, Table } from 'antd';
+import { Rocket, FileText, Terminal, Cpu, Server as ServerIcon, Layers, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { getServers, getModels, getDeployments, createDeployment, getServerGpuStatus, getImageVersions, getDeployProgress, getDeployYaml, getDeployLogsUrl } from '../../api';
 import type { Server, Model, GpuInfo, Deployment } from '../../types';
 
 const { Option } = Select;
@@ -21,7 +21,25 @@ const statusColorMap: Record<string, { bg: string; text: string }> = {
   pending: { bg: 'rgba(245,158,11,0.1)', text: '#D97706' },
 };
 
-const DeployPage: React.FC = () => {
+const deploySteps: Record<string, { label: string; icon: React.ReactNode }> = {
+  initializing: { label: '初始化', icon: <Loader2 size={14} /> },
+  check_gpu: { label: '校验 GPU', icon: <Cpu size={14} /> },
+  check_port: { label: '检查端口', icon: <ServerIcon size={14} /> },
+  check_model: { label: '检查模型', icon: <Layers size={14} /> },
+  sync_model: { label: '打包模型', icon: <Layers size={14} /> },
+  upload_model: { label: '上传模型', icon: <ServerIcon size={14} /> },
+  extract_model: { label: '解压模型', icon: <Layers size={14} /> },
+  sync_model_done: { label: '模型就绪', icon: <CheckCircle size={14} /> },
+  check_model_done: { label: '模型就绪', icon: <CheckCircle size={14} /> },
+  sync_key: { label: '同步 Key', icon: <FileText size={14} /> },
+  render_yaml: { label: '生成配置', icon: <FileText size={14} /> },
+  upload_yaml: { label: '上传配置', icon: <ServerIcon size={14} /> },
+  start_service: { label: '启动服务', icon: <Rocket size={14} /> },
+  done: { label: '部署成功', icon: <CheckCircle size={14} /> },
+  failed: { label: '部署失败', icon: <AlertCircle size={14} /> },
+};
+
+const DeployFormPage: React.FC = () => {
   const [form] = Form.useForm();
   const [servers, setServers] = useState<Server[]>([]);
   const [models, setModels] = useState<Model[]>([]);
@@ -29,15 +47,21 @@ const DeployPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [gpuList, setGpuList] = useState<GpuInfo[]>([]);
+  const [imageVersions, setImageVersions] = useState<ImageVersion[]>([]);
+  const [selectedServerId, setSelectedServerId] = useState<number | null>(null);
   const [yamlModalOpen, setYamlModalOpen] = useState(false);
   const [currentYaml, setCurrentYaml] = useState('');
-  const [selectedServerId, setSelectedServerId] = useState<number | null>(null);
-  const [imageVersions, setImageVersions] = useState<ImageVersion[]>([]);
   const [logModalOpen, setLogModalOpen] = useState(false);
-  const [currentDeployId, setCurrentDeployId] = useState<number | null>(null);
   const [logLines, setLogLines] = useState<string[]>([]);
   const logEventSource = useRef<EventSource | null>(null);
   const logEndRef = useRef<HTMLDivElement | null>(null);
+
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [deployProgress, setDeployProgress] = useState(0);
+  const [deployStatus, setDeployStatus] = useState<'pending' | 'running' | 'done' | 'failed'>('pending');
+  const [deployStep, setDeployStep] = useState('');
+  const [deployMessage, setDeployMessage] = useState('');
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (logEndRef.current) {
@@ -49,7 +73,56 @@ const DeployPage: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    return () => stopProgressPolling();
+  }, []);
+
+  const startProgressPolling = (deployId: number) => {
+    setProgressModalOpen(true);
+    setDeployProgress(0);
+    setDeployStatus('pending');
+    setDeployStep('initializing');
+    setDeployMessage('正在初始化部署...');
+
+    const poll = async () => {
+      try {
+        const res = await getDeployProgress(deployId);
+        const p = res.data;
+        setDeployProgress(p.percent || 0);
+        setDeployStatus(p.status as 'pending' | 'running' | 'done' | 'failed');
+        setDeployStep(p.step || '');
+        setDeployMessage(p.message || '');
+
+        if (p.status === 'done') {
+          message.success('部署成功!');
+          setProgressModalOpen(false);
+          fetchData();
+          form.resetFields();
+          return;
+        }
+        if (p.status === 'failed') {
+          message.error(`部署失败: ${p.message}`);
+          setProgressModalOpen(false);
+          fetchData();
+          return;
+        }
+      } catch (e) {
+        // ignore polling errors
+      }
+      pollTimerRef.current = setTimeout(poll, 1500);
+    };
+    poll();
+  };
+
+  const stopProgressPolling = () => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
   const fetchData = async () => {
+    setLoading(true);
     try {
       const [serverRes, modelRes, deployRes, imageRes] = await Promise.all([
         getServers(),
@@ -63,6 +136,8 @@ const DeployPage: React.FC = () => {
       setImageVersions(imageRes.data || []);
     } catch (e) {
       message.error('获取数据失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,7 +170,7 @@ const DeployPage: React.FC = () => {
 
     setDeploying(true);
     try {
-      await createDeployment({
+      const res = await createDeployment({
         service_name: values.service_name,
         server_id: values.server_id,
         model_id: values.model_id,
@@ -103,23 +178,11 @@ const DeployPage: React.FC = () => {
         port: values.port,
         gpus: selectedGpus.join(','),
       });
-      message.success('部署成功');
-      fetchData();
-      form.resetFields();
+      startProgressPolling(res.data.id);
     } catch (e: any) {
       message.error(e.response?.data?.detail || '部署失败');
     }
     setDeploying(false);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteDeployment(id);
-      message.success('删除成功');
-      fetchData();
-    } catch (e) {
-      message.error('删除失败');
-    }
   };
 
   const handleViewYaml = async (id: number) => {
@@ -133,7 +196,6 @@ const DeployPage: React.FC = () => {
   };
 
   const handleViewLogs = (id: number) => {
-    setCurrentDeployId(id);
     setLogLines([]);
     setLogModalOpen(true);
     connectToLogStream(id);
@@ -164,6 +226,14 @@ const DeployPage: React.FC = () => {
     }
     setLogModalOpen(false);
   };
+
+  const statusIcon = (status: string) => {
+    if (status === 'done') return <CheckCircle size={18} className="text-green-500" />;
+    if (status === 'failed') return <AlertCircle size={18} className="text-red-500" />;
+    return <Loader2 size={18} className="text-primary animate-spin" />;
+  };
+
+  const latestImage = imageVersions.find((img) => img.is_latest === 1);
 
   const columns = [
     {
@@ -218,20 +288,17 @@ const DeployPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_: any, record: Deployment) => (
-        <Space size={4}>
+        <span>
           <Button type="text" size="small" icon={<FileText size={14} />} onClick={() => handleViewYaml(record.id)}>
             YAML
           </Button>
           <Button type="text" size="small" icon={<Terminal size={14} />} onClick={() => handleViewLogs(record.id)}>
             日志
           </Button>
-          <Button type="text" size="small" danger icon={<Trash2 size={14} />} onClick={() => handleDelete(record.id)} />
-        </Space>
+        </span>
       ),
     },
   ];
-
-  const latestImage = imageVersions.find((img) => img.is_latest === 1);
 
   return (
     <motion.div
@@ -337,13 +404,13 @@ const DeployPage: React.FC = () => {
         </Card>
       </motion.div>
 
-      {/* Deployments Table */}
+      {/* Recent Deployments Table */}
       <div>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <Layers size={18} className="text-text-muted" />
             <h2 className="text-lg font-semibold" style={{ color: '#111827' }}>
-              部署列表
+              最近部署
             </h2>
             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/[0.08] text-primary font-medium">
               {deployments.length}
@@ -373,11 +440,88 @@ const DeployPage: React.FC = () => {
             dataSource={deployments}
             rowKey="id"
             loading={loading}
-            pagination={false}
+            pagination={{ pageSize: 5 }}
             className="!border-0"
           />
         </div>
       </div>
+
+      {/* Deploy Progress Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            {statusIcon(deployStatus)}
+            <span>部署进度</span>
+          </div>
+        }
+        open={progressModalOpen}
+        onCancel={stopProgressPolling}
+        footer={null}
+        width={560}
+        closable={deployStatus === 'done' || deployStatus === 'failed'}
+        maskClosable={false}
+      >
+        <div className="py-4">
+          <Progress
+            percent={deployProgress}
+            strokeColor={deployStatus === 'failed' ? '#EF4444' : deployStatus === 'done' ? '#10B981' : '#5B8CFF'}
+            status={deployStatus === 'done' ? 'success' : deployStatus === 'failed' ? 'exception' : 'active'}
+            size={[500, 12]}
+            className="!mb-6"
+          />
+
+          <div className="space-y-3">
+            {Object.entries(deploySteps).filter(([key]) => key !== 'done' && key !== 'failed').map(([key, info]) => {
+              const stepKey = deployStep;
+              const stepKeys = Object.keys(deploySteps);
+              const currentIndex = stepKeys.indexOf(stepKey);
+              const thisIndex = stepKeys.indexOf(key);
+              const isCompleted = currentIndex > thisIndex || (stepKey === key && (deployStatus === 'done'));
+              const isCurrent = stepKey === key && deployStatus === 'running';
+              const isPending = currentIndex < thisIndex;
+
+              let stepColor = '#9CA3AF';
+              let stepIcon = <div className="w-3.5 h-3.5 rounded-full border-2 border-current" />;
+
+              if (isCompleted || (stepKey === 'done' && deployStatus === 'done')) {
+                stepColor = '#10B981';
+                stepIcon = <CheckCircle size={14} />;
+              } else if (isCurrent) {
+                stepColor = '#5B8CFF';
+                stepIcon = <Loader2 size={14} className="animate-spin" />;
+              } else if (stepKey === 'failed' && deployStatus === 'failed') {
+                stepColor = '#EF4444';
+                stepIcon = <AlertCircle size={14} />;
+              }
+
+              if (isPending && deployStatus !== 'pending') return null;
+
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                  style={{
+                    background: isCurrent ? 'rgba(91,140,255,0.06)' : 'transparent',
+                    color: stepColor,
+                    fontWeight: isCurrent ? 500 : 400,
+                  }}
+                >
+                  {stepIcon}
+                  <span className="text-sm">{info.label}</span>
+                  {isCurrent && deployMessage && (
+                    <span className="text-xs" style={{ color: '#9CA3AF', marginLeft: 'auto' }}>
+                      {deployMessage}
+                    </span>
+                  )}
+                  {isCompleted && (
+                    <Tag color="green" className="ml-auto !m-0">完成</Tag>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
 
       {/* YAML Modal */}
       <Modal
@@ -445,4 +589,4 @@ const DeployPage: React.FC = () => {
   );
 };
 
-export default DeployPage;
+export default DeployFormPage;

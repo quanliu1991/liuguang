@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from database.models import Deployment
+from database.models import Deployment, Model
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -18,11 +18,14 @@ class DeployResponse(BaseModel):
     service_name: str
     server_id: int
     model_id: int
+    model_name: str = ""
     image: str
     port: int
     gpus: str
     status: str
     yaml_content: str
+    from_source: str
+    detected_model_name: str = ""
     created_at: datetime
 
     class Config:
@@ -30,7 +33,20 @@ class DeployResponse(BaseModel):
 
 
 def get_deployments(db: Session):
-    return db.query(Deployment).all()
+    rows = (
+        db.query(Deployment, Model.name.label("model_name"))
+        .outerjoin(Model, Deployment.model_id == Model.id)
+        .all()
+    )
+    results = []
+    for deploy, model_name in rows:
+        d = {
+            c.name: getattr(deploy, c.name)
+            for c in deploy.__table__.columns
+        }
+        d["model_name"] = model_name or ""
+        results.append(d)
+    return results
 
 
 def get_deployment(db: Session, deploy_id: int):
@@ -38,10 +54,13 @@ def get_deployment(db: Session, deploy_id: int):
 
 
 def create_deployment(db: Session, data: DeployCreate):
-    existing = db.query(Deployment).filter(Deployment.service_name == data.service_name).first()
+    existing = db.query(Deployment).filter(
+        Deployment.service_name == data.service_name,
+        Deployment.server_id == data.server_id,
+    ).first()
     if existing:
         if existing.status == "running":
-            raise ValueError(f"服务名 '{data.service_name}' 已在运行中，请使用其他名称")
+            raise ValueError(f"服务器 {data.server_id} 上的服务名 '{data.service_name}' 已在运行中，请使用其他名称")
         else:
             db.delete(existing)
             db.commit()

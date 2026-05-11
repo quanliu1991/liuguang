@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card, Row, Col, Statistic, Tag, Space } from 'antd';
-import { Server, Brain, Rocket, CheckCircle, ArrowUpRight, Clock, Zap } from 'lucide-react';
+import { Card, Row, Col } from 'antd';
+import { Server, Brain, CheckCircle, ArrowUpRight, Clock, Zap } from 'lucide-react';
 import { getDeployments, getServers, getModels } from '../../api';
 
 const StatusPage: React.FC = () => {

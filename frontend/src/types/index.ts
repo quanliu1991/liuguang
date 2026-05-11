@@ -34,10 +34,13 @@ export type Deployment = {
   service_name: string;
   server_id: number;
   model_id: number;
+  model_name: string;
   image: string;
   port: number;
   gpus: string;
   status: string;
   yaml_content: string;
+  from_source: string;
+  detected_model_name: string;
   created_at: string;
 }

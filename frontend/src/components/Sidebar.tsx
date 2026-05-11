@@ -24,7 +24,7 @@ const menuItems = [
   { key: '/images', icon: Network, label: '镜像版本' },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
+const Sidebar: React.FC<SidebarProps> = ({ }) => {
   const location = useLocation();
   const navigate = useNavigate();
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Table, Button, Form, Input, InputNumber, message, Space, Tag, Popconfirm, Modal, Card } from 'antd';
+import { Table, Button, Form, Input, InputNumber, message, Space, Popconfirm, Modal } from 'antd';
 import { Plus, Pencil, Trash2, RefreshCw, Settings, Activity, Cpu, Server, Shield } from 'lucide-react';
 import { getServers, createServer, updateServer, deleteServer, serverHealthCheck, serverDetectGpu, serverAutoSetup } from '../../api';
 import type { Server as ServerType } from '../../types';

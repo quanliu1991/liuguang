@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, User, ChevronDown } from 'lucide-react';
+import { Bell, ChevronDown } from 'lucide-react';
 
 const Header: React.FC = () => {
   return (

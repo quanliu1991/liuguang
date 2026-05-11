@@ -54,7 +54,14 @@ def get_server(db: Session, server_id: int):
 
 
 def create_server(db: Session, data: ServerCreate):
-    server = Server(**data.model_dump())
+    payload = data.model_dump()
+    if payload.get("ip"):
+        payload["ip"] = payload["ip"].strip()
+    if payload.get("name"):
+        payload["name"] = payload["name"].strip()
+    if payload.get("ssh_user"):
+        payload["ssh_user"] = payload["ssh_user"].strip()
+    server = Server(**payload)
     db.add(server)
     db.commit()
     db.refresh(server)
@@ -66,6 +73,8 @@ def update_server(db: Session, server_id: int, data: ServerUpdate):
     if not server:
         return None
     for key, value in data.model_dump(exclude_unset=True).items():
+        if isinstance(value, str) and key in ("ip", "name", "ssh_user"):
+            value = value.strip()
         setattr(server, key, value)
     db.commit()
     db.refresh(server)

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = axios.create({ baseURL: 'http://localhost:8000/api' });
+const API = axios.create({ baseURL: '/api' });
 
 // Servers
 export const getServers = () => API.get('/servers');
@@ -24,6 +24,7 @@ export const getDeployments = () => API.get('/deployments');
 export const createDeployment = (data: any) => API.post('/deployments', data);
 export const deleteDeployment = (id: number) => API.delete(`/deployments/${id}`);
 export const getDeployYaml = (id: number) => API.get(`/deployments/${id}/yaml`);
+export const getDeployProgress = (id: number) => API.get(`/deployments/${id}/progress`);
 
 // Image Versions
 export const getImageVersions = () => API.get('/images');
@@ -32,6 +33,6 @@ export const updateImageVersion = (id: number, data: any) => API.put(`/images/${
 export const deleteImageVersion = (id: number) => API.delete(`/images/${id}`);
 
 // Deploy logs SSE
-export const getDeployLogsUrl = (id: number) => `http://localhost:8000/api/deployments/${id}/logs`;
+export const getDeployLogsUrl = (id: number) => `/api/deployments/${id}/logs`;
 
 export default API;
