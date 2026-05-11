@@ -109,6 +109,9 @@ const Sidebar: React.FC<SidebarProps> = ({ }) => {
         <div className="text-[10px]" style={{ color: '#C4C9D4', letterSpacing: '0.05em' }}>
           让模型如流光般抵达每一处算力
         </div>
+        <div className="mt-1 text-[10px] font-mono" style={{ color: '#D1D5DB', letterSpacing: '0.05em' }}>
+          v0.0.2
+        </div>
       </div>
     </motion.div>
   );
