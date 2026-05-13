@@ -26,7 +26,7 @@ def scan_server_containers(db: Session, server) -> dict:
     3. docker inspect 获取容器完整配置
     4. 解析启动命令/脚本提取端口、模型路径等
     5. 匹配模型并创建/同步部署记录
-    6. 清理该服务器上已不存在容器的 scanned 部署记录
+    6. 清理该服务器上已不存在容器的所有部署记录
 
     Returns: {"scanned": N, "added": M, "synced": K, "skipped": P, "removed": R, "errors": [...]}
     """
@@ -151,14 +151,14 @@ def scan_server_containers(db: Session, server) -> dict:
                 result["errors"].append(f"处理容器 {container_name} 时出错: {str(e)}")
                 logger.error(f"处理容器 {container_name} 时出错: {str(e)}")
 
-        # Step 5: Remove stale scanned deployments that no longer have a running container
-        stale = db.query(Deployment).filter(
+        # Step 5: Remove stale deployments that no longer have a running container
+        # Clean up ALL deployments (scanned + manual) where container no longer exists
+        all_deploys = db.query(Deployment).filter(
             Deployment.server_id == server.id,
-            Deployment.from_source == "scanned",
         ).all()
-        for dep in stale:
+        for dep in all_deploys:
             if dep.service_name not in found_container_names:
-                logger.info(f"清理过期部署记录: {dep.service_name} (容器已不存在)")
+                logger.info(f"清理过期部署记录: {dep.service_name} (容器已不存在, from_source={dep.from_source})")
                 db.delete(dep)
                 result["removed"] += 1
         if result["removed"] > 0:

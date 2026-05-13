@@ -7,6 +7,7 @@ import StatusPage from './pages/StatusPage';
 import ServerPage from './pages/ServerPage';
 import ModelPage from './pages/ModelPage';
 import ImagePage from './pages/ImagePage';
+import DigitalTwinPage from './pages/DigitalTwinPage';
 
 const antTheme = {
   token: {
@@ -75,6 +76,7 @@ function App() {
             <Route path="servers" element={<ServerPage />} />
             <Route path="models" element={<ModelPage />} />
             <Route path="images" element={<ImagePage />} />
+            <Route path="twin" element={<DigitalTwinPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

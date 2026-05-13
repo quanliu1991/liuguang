@@ -37,4 +37,7 @@ export const deleteImageVersion = (id: number) => API.delete(`/images/${id}`);
 // Deploy logs SSE
 export const getDeployLogsUrl = (id: number) => `/api/deployments/${id}/logs`;
 
+// Digital Twin
+export const getDigitalTwin = () => API.get('/digital-twin');
+
 export default API;

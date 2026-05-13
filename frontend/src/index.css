@@ -125,3 +125,44 @@
   background: rgba(91,140,255,0.06) !important;
   border-radius: 12px !important;
 }
+
+/* Digital Twin animations */
+@keyframes flowPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes energyFlow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.digital-twin-flow-line {
+  stroke-dasharray: 4 6;
+  animation: energyFlow 1s linear infinite;
+}
+
+.digital-twin-pulse {
+  animation: flowPulse 2s ease-in-out infinite;
+}
+
+.digital-twin-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.digital-twin-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(91,140,255,0.08), transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}

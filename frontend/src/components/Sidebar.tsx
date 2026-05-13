@@ -9,6 +9,7 @@ import {
   Brain,
   Network,
   LayoutDashboard,
+  Cpu,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,6 +18,7 @@ interface SidebarProps {
 
 const menuItems = [
   { key: '/dashboard', icon: LayoutDashboard, label: '总览' },
+  { key: '/twin', icon: Cpu, label: '算力数字孪生' },
   { key: '/deploy', icon: Rocket, label: '创建部署' },
   { key: '/status', icon: ListChecks, label: '部署列表' },
   { key: '/servers', icon: Server, label: '服务器管理' },

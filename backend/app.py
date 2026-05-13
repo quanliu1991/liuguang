@@ -45,6 +45,9 @@ from api.image import (
 )
 from services.deploy_service import run_deployment, run_deployment_async, get_deploy_progress, clear_deploy_progress
 from services.gpu_service import get_gpu_status
+from services.digital_twin_service import get_digital_twin_data, get_resource_summary, get_fragment_alerts, get_schedule_suggestions
+import json
+import time
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -444,3 +447,18 @@ def stream_deploy_progress(deploy_id: int):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ====== Digital Twin API ======
+@app.get("/api/digital-twin")
+def digital_twin(db: Session = Depends(get_db)):
+    data = get_digital_twin_data(db)
+    summary = get_resource_summary(data)
+    fragment_alerts = get_fragment_alerts(data)
+    schedule_suggestions = get_schedule_suggestions(data)
+    return {
+        "data": data,
+        "summary": summary,
+        "fragment_alerts": fragment_alerts,
+        "schedule_suggestions": schedule_suggestions,
+    }
