@@ -309,6 +309,18 @@ def scan_deployments(db: Session = Depends(get_db)):
     return result
 
 
+@app.post("/api/deployments/scan/{server_id}")
+def scan_single_server(server_id: int, db: Session = Depends(get_db)):
+    """手动触发单台服务器的容器扫描"""
+    from services.container_scan_service import scan_server_containers
+    from api.server import get_server
+    server = get_server(db, server_id)
+    if not server:
+        raise HTTPException(404, "Server not found")
+    result = scan_server_containers(db, server)
+    return result
+
+
 # ====== Image Version API ======
 @app.get("/api/images")
 def list_images(db: Session = Depends(get_db)):

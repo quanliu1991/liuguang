@@ -21,6 +21,8 @@ export const deleteModel = (id: number) => API.delete(`/models/${id}`);
 
 // Deployments
 export const getDeployments = () => API.get('/deployments');
+export const scanDeployments = () => API.post('/deployments/scan');
+export const scanSingleServer = (serverId: number) => API.post(`/deployments/scan/${serverId}`);
 export const createDeployment = (data: any) => API.post('/deployments', data);
 export const deleteDeployment = (id: number) => API.delete(`/deployments/${id}`);
 export const getDeployYaml = (id: number) => API.get(`/deployments/${id}/yaml`);
